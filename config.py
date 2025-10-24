@@ -1,0 +1,2 @@
+AES_KEY = b'YmhldnMtcmVuYXVsdC01MDAta2V5LWVu'
+AES_IV = b'aXYtNTAwLWJoZXZz'
