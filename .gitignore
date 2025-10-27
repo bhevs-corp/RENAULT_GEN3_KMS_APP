@@ -4,4 +4,8 @@
 /venv
 __pycache__
 
+build
+app.spec
+dist/
+
 change_remote.sh
