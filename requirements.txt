@@ -2,3 +2,5 @@ Flask
 pycryptodomex
 pyinstaller
 requests
+python-dotenv
+cryptography

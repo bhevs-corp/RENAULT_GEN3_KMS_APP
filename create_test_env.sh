@@ -1,18 +1,11 @@
 #!/bin/bash
 
-python3 -m venv venv
-source venv/bin/activate
+Remove-Item -Recurse -Force .\venv
+Remove-Item -Recurse -Force .\build
+py -m venv venv
+.\venv\Scripts\Activate.ps1
 pip install --break-system-packages -r requirements.txt
-export PATH=$PATH:/home/choiseu/.local/bin
-pyinstaller --onefile app.py
+pyinstaller --onefile --add-data "data.txt;." --add-data "api;api" --add-data "key;key" --add-data ".env;." app.py
+
 deactivate
-
-## Remove-Item -Recurse -Force .\venv
-## Remove-Item -Recurse -Force .\build
-## py -m venv venv
-## .\venv\Scripts\Activate.ps1
-## pip install --break-system-packages -r requirements.txt
-## export PATH=$PATH:/home/choiseu/.local/bin
-## pyinstaller --onefile --add-data "data.txt;." --add-data "api;api" app.py
-
-## deactivate
+rm -rf ./dist/app.exe

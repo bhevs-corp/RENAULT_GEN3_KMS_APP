@@ -9,3 +9,6 @@ app.spec
 dist/
 
 change_remote.sh
+*env*
+/key
+/temp
