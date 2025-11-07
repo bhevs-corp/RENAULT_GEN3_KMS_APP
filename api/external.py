@@ -121,10 +121,8 @@ def get_kms_session(mode: str) -> Optional[Dict[str, Any]]:
     load_environment()
     if mode == "sign":
         key_name = get_env("KEYNAME_SIGN")
-        scope = get_env("SCOPE_SIGN")
     elif mode == "encrypt":
         key_name = get_env("KEYNAME_ENCRYPT")
-        scope = get_env("SCOPE_ENCRYPT")
     else:
         logger.error(f"Invalid mode for get_kms_session: {mode}")
         return None
@@ -133,12 +131,12 @@ def get_kms_session(mode: str) -> Optional[Dict[str, Any]]:
     api_key = get_env("API_KEY")
     private_key_path = get_env("PRIVATE_KEY")
     private_key_password = get_env("PRIVATE_KEY_PASSWORD")
-    audience = get_env("UAD")
     api_gateway = get_env("API_GATEWAY")
     kms_auth_endpoint = get_env("KMS_AUTHENTICATION_ENDPOINT")
     username = get_env("KMS_USERNAME")
     password = get_env("KMS_PASSWORD")
-    if not all([key_name, key_id, client_id, api_key, private_key_path, audience, scope, api_gateway, kms_auth_endpoint, username, password]):
+    scope = get_env("SCOPE")
+    if not all([key_name, key_id, client_id, api_key, private_key_path, scope, api_gateway, kms_auth_endpoint, username, password]):
         logger.error("Missing required environment variables for KMS session")
         return None
     if private_key_password:
@@ -147,7 +145,7 @@ def get_kms_session(mode: str) -> Optional[Dict[str, Any]]:
         private_key = load_private_key(private_key_path, None)
     if not private_key:
         return None
-    client_assertion = create_jwt(private_key, key_id, client_id, audience)
+    client_assertion = create_jwt(private_key, key_id, client_id, api_gateway)
     if not client_assertion:
         return None
     access_token = get_access_token(api_gateway, scope, client_assertion)
