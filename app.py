@@ -124,7 +124,6 @@ def encrypt_payload():
         if 'data' in request.files:
             file = request.files['data']
             file_bytes = file.read()
-            # 원본 파일명에서 확장자 앞에 _Encrypted 추가
             orig_filename = file.filename or "encrypted.bin"
             if "." in orig_filename:
                 name, ext = orig_filename.rsplit('.', 1)
