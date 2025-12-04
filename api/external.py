@@ -192,10 +192,10 @@ def encrypt_with_kms(data: bytes) -> Optional[Dict[str, Any]]:
         logger.error("KMS encrypt session not established")
         return None
     encryption_endpoint = get_env("ENCRYPTION_ENDPOINT")
-    iv = get_env("IV")
-    if not iv:
-        logger.error("IV not set in environment")
-        return None
+    # iv = get_env("IV")
+    # if not iv:
+    #     logger.error("IV not set in environment")
+    #     return None
     try:
         plaintext_b64 = base64.b64encode(data).decode("utf-8")
         logger.info(f"Base64-encoded input data for encryption (length={len(data)})")
@@ -213,18 +213,21 @@ def encrypt_with_kms(data: bytes) -> Optional[Dict[str, Any]]:
         "id": session["key_name"],
         "plaintext": plaintext_b64,
         "mode": "CBC",
-        "iv": iv,
-        "pad": "none"
+        # "iv": iv,
+        # "pad": "none"
     }
     try:
         resp = requests.post(encryption_endpoint, headers=headers, json=data_json, verify=False)
+        logger.info(f"KMS encrypt API response status: {resp}")
         logger.info(f"KMS encrypt API response status: {resp.status_code}")
         logger.info(f"KMS encrypt API response text: {resp.text[:500]}")
         if resp.status_code != 200:
             logger.error(f"Encrypt API failed: {resp.text}")
             return None
         result = resp.json()
+        logger.info(f"KMS encrypt API result: {result}")
         ciphertext_b64 = result.get("ciphertext")
+        iv = result.get("iv")
         logger.info(f"KMS encrypt API ciphertext (base64, first 100 chars): {str(ciphertext_b64)[:100]}")
         if not ciphertext_b64:
             logger.error("No ciphertext in encrypt API response")
@@ -236,7 +239,7 @@ def encrypt_with_kms(data: bytes) -> Optional[Dict[str, Any]]:
             logger.error(f"Failed to decode ciphertext: {e}")
             return None
         logger.info("Encryption completed successfully and ciphertext binary returned")
-        return {"status": "encrypt_success", "data": ciphertext_bin}
+        return {"status": "encrypt_success", "data": {"ciphertext_bin": ciphertext_bin, "iv": iv}}
     except Exception as e:
         logger.error(f"Exception in encrypt_with_kms: {e}")
         return None
@@ -268,11 +271,12 @@ def call_external_encrypt_api(payload: Dict[str, Any]) -> Optional[Dict[str, Any
         logger.error("Encryption failed or no data in response")
         return {"status": "encrypt_fail", "data": None}
     logger.info("Encryption completed successfully")
-    ciphertext_bin = result.get("data")
+    ciphertext_bin = result.get("data").get("ciphertext_bin")
+    iv = result.get("data").get("iv")
     import base64
     if isinstance(ciphertext_bin, bytes):
         ciphertext_b64 = base64.b64encode(ciphertext_bin).decode("utf-8")
         logger.info(f"call_external_encrypt_api: ciphertext_b64 length: {len(ciphertext_b64)}")
     else:
         ciphertext_b64 = ciphertext_bin
-    return {"status": "encrypt_success", "data": ciphertext_b64}
+    return {"status": "encrypt_success", "data": {"ciphertext_bin": ciphertext_bin, "iv": iv}}

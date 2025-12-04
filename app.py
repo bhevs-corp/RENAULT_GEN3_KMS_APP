@@ -7,6 +7,7 @@ import time
 import logging
 import io
 import base64
+import zipfile
 
 logging.basicConfig(level=logging.INFO)
 
@@ -130,14 +131,28 @@ def encrypt_payload():
                 encrypted_filename = f"{name}_Encrypted.{ext}"
             else:
                 encrypted_filename = orig_filename + "_Encrypted"
+                name = orig_filename
             payload_dict = {"data": file_bytes}
             result = call_external_encrypt_api(payload_dict)
-            ciphertext_bytes = base64.b64decode(result["data"])
+            ciphertext_bytes = result["data"]["ciphertext_bin"]
+            iv_bytes = result["data"]["iv"]
+
+            # iv가 str이면 .txt, 아니면 .bin으로 저장
+            if isinstance(iv_bytes, str):
+                iv_filename = f"{name}_IV.txt"
+                iv_bytes = iv_bytes.encode("utf-8")
+            else:
+                iv_filename = f"{name}_IV.bin"
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
+                zip_file.writestr(encrypted_filename, ciphertext_bytes)
+                zip_file.writestr(iv_filename, iv_bytes)
+            zip_buffer.seek(0)
             return send_file(
-                io.BytesIO(ciphertext_bytes),
+                zip_buffer,
                 as_attachment=True,
-                download_name=encrypted_filename,
-                mimetype="application/octet-stream"
+                download_name=f"{name}_encrypted_with_iv.zip",
+                mimetype="application/zip"
             )
         else:
             result = call_external_encrypt_api(request.json)
