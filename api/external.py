@@ -53,33 +53,24 @@ def init_kms_client():
         else:
             key_path = key_filename
 
-        okta_url = os.getenv("API_GATEWAY", "")
-        if okta_url.endswith("/v1/token"):
-            okta_url = okta_url.replace("/v1/token", "")
-
-        kms_base_url = os.getenv("KMS_AUTHENTICATION_ENDPOINT", "")
-        if "/crypto-services/v2" in kms_base_url:
-            split_token = "/crypto-services/v2"
-            idx = kms_base_url.find(split_token)
-            kms_base_url = kms_base_url[:idx + len(split_token)]
-
-        logger.info(f"Initializing KMS Client... (KMS URL: {kms_base_url})")
+        host = os.getenv("HOST")
+        logger.info(f"Initializing KMS Client... (KMS URL: {host})")
 
         kms_client = KMSClient(
-            base_url=kms_base_url,
-            base_url_okta=okta_url,
+            base_url=host,
+            base_url_okta=os.getenv("OKTA_HOST"),
             user=os.getenv("KMS_USERNAME"),
             password=os.getenv("KMS_PASSWORD"),
             client_id=os.getenv("CLIENT_ID"),
             apikey=os.getenv("API_KEY"),
             idp_private_key=key_path,
             kid=os.getenv("KEY_ID"),
-            scope=os.getenv("SCOPE", "irn-77153.cryptoAll"),
+            scope=os.getenv("SCOPE"),
             token_store=MemoryTokensStore(
                 user=os.getenv("KMS_USERNAME"),
                 client_id=os.getenv("CLIENT_ID")
-            ),
-            http_user_agent=UserAgentAppend("BHEVS_Gen3_App/1.0")
+            )
+            ,http_user_agent=UserAgentAppend(os.getenv("HTTP_USER_AGENT"))
         )
         logger.info("KMS Client Initialized.")
     except Exception as e:
@@ -120,7 +111,10 @@ def call_external_sign_api(payload: Dict[str, Any]) -> Dict[str, Any]:
     def _do_sign():
         result = kms_client.sign(
             key_name=os.getenv("KEYNAME_SIGN"),
-            sign_algo="RSA", hash_algo="SHA-256", pad="PSS",
+            sign_algo=os.getenv("SIGN_ALGO"),
+            hash_algo=os.getenv("HASH_ALGO"),
+            pad=os.getenv("PAD"),
+            salt_length=os.getenv("SALT_LENGTH"),
             data_to_sign=data
         )
         return {"status": "sign_success", "data": result.data}
@@ -139,7 +133,9 @@ def call_external_encrypt_api(payload: Dict[str, Any]) -> Dict[str, Any]:
 
         result = kms_client.encrypt_aes(
             key_name=os.getenv("KEYNAME_ENCRYPT"),
-            data_b64=data_b64, mode="CBC", pad="PKCS7"
+            data_b64=data_b64,
+            mode=os.getenv("ENCRYPT_MODE"),
+            pad=os.getenv("ENCRYPT_PAD")
         )
 
         if result.ciphertext:

@@ -12,6 +12,8 @@ import zipfile
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
+app.logger.setLevel(logging.DEBUG)
+logging.getLogger('werkzeug').setLevel(logging.DEBUG)
 token_mgr = TokenManager()
 
 def handle_user_exception(e, context=""):
@@ -161,3 +163,4 @@ def encrypt_payload():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=32511)
+    logging.basicConfig(level=logging.DEBUG)
