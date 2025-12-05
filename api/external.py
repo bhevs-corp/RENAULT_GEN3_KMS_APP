@@ -6,7 +6,7 @@ import logging
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
-# [SSL 패치] 르노 UAT 사설 인증서 통과용 (필수 유지)
+# SSL Patch
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -20,19 +20,15 @@ def force_no_ssl_verify():
 
 force_no_ssl_verify()
 
-# [라이브러리 로드]
+# Library Load
 try:
     from kmslib import KMSClient, MemoryTokensStore, UserAgentAppend
 except ImportError:
     KMSClient = None
 
-# --------------------------------------------------------------------------
-# [Log Level 수정] 에러 원인 파악을 위해 DEBUG 모드 활성화
-# --------------------------------------------------------------------------
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(sys.stdout)])
 logger = logging.getLogger("ExternalAPI")
 
-# kmslib 내부 로그를 켜야 "왜" 실패했는지(404? 401?) 보입니다.
 logging.getLogger("kmslib").setLevel(logging.DEBUG)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -44,9 +40,6 @@ def resource_path(relative_path):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(BASE_DIR, relative_path)
 
-# --------------------------------------------------------------------------
-# KMSLib 클라이언트 관리 (Auto-Reset 추가)
-# --------------------------------------------------------------------------
 kms_client = None
 
 def init_kms_client():
@@ -54,19 +47,16 @@ def init_kms_client():
     if not KMSClient: return
 
     try:
-        # 1. 키 파일 경로 처리
         key_filename = os.getenv("PRIVATE_KEY", "key/private_key.pem")
         if not os.path.isabs(key_filename):
             key_path = resource_path(key_filename)
         else:
             key_path = key_filename
 
-        # 2. URL 보정 (Okta)
         okta_url = os.getenv("API_GATEWAY", "")
         if okta_url.endswith("/v1/token"):
             okta_url = okta_url.replace("/v1/token", "")
 
-        # 3. URL 보정 (KMS)
         kms_base_url = os.getenv("KMS_AUTHENTICATION_ENDPOINT", "")
         if "/crypto-services/v2" in kms_base_url:
             split_token = "/crypto-services/v2"
@@ -95,29 +85,22 @@ def init_kms_client():
     except Exception as e:
         logger.error(f"KMS Init Failed: {e}")
 
-# 최초 초기화
 init_kms_client()
 
-# --------------------------------------------------------------------------
-# [핵심 로직 수정] 좀비 상태 방지 (Retry Logic)
-# --------------------------------------------------------------------------
 def execute_with_retry(operation_name, func, *args, **kwargs):
     global kms_client
 
-    # 1. 클라이언트 없으면 초기화
     if not kms_client:
         init_kms_client()
         if not kms_client:
             return {"status": f"{operation_name}_fail", "data": None}
 
     try:
-        # 2. 본래 기능 실행 시도
         return func(*args, **kwargs)
     except Exception as e:
         error_msg = str(e)
         logger.warning(f"First attempt failed ({error_msg}). Attempting reset and retry...")
 
-        # 3. "에러 상태(Error state)"라면 과감하게 클라이언트 폐기 후 재생성
         kms_client = None
         init_kms_client()
 
@@ -125,16 +108,11 @@ def execute_with_retry(operation_name, func, *args, **kwargs):
             return {"status": f"{operation_name}_fail", "data": None}
 
         try:
-            # 4. 딱 한 번만 재시도 (Retry)
             return func(*args, **kwargs)
         except Exception as retry_e:
-            # 두 번이나 안 되면 진짜 안 되는 것임
             logger.error(f"Retry failed: {retry_e}")
             return {"status": f"{operation_name}_fail", "data": None}
 
-# --------------------------------------------------------------------------
-# 서명 및 암호화 (Retry 래퍼 적용)
-# --------------------------------------------------------------------------
 def call_external_sign_api(payload: Dict[str, Any]) -> Dict[str, Any]:
     data = payload.get("data")
     if not data: return {"status": "sign_fail", "data": None}

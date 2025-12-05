@@ -57,7 +57,7 @@ def register_user():
     try:
         user = request.json.get('user')
         check = validate_user_existence(user, required=True, not_registered_code=200)
-        if check and check[1] == 400:  # 필수 입력만 체크
+        if check and check[1] == 400:
             return check
         return register_user_with_check(user)
     except Exception as e:
