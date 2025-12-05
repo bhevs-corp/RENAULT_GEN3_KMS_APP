@@ -9,7 +9,7 @@ app.spec
 dist/
 .exe
 
-change_remote.sh
 *env*
 /key
 /temp
+/libs
