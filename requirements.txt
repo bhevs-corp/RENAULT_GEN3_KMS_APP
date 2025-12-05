@@ -4,3 +4,4 @@ pyinstaller
 requests
 python-dotenv
 cryptography
+./libs/kmslib-1.6.1.tar.gz

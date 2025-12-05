@@ -137,7 +137,6 @@ def encrypt_payload():
             ciphertext_bytes = result["data"]["ciphertext_bin"]
             iv_bytes = result["data"]["iv"]
 
-            # iv가 str이면 .txt, 아니면 .bin으로 저장
             if isinstance(iv_bytes, str):
                 iv_filename = f"{name}_IV.txt"
                 iv_bytes = iv_bytes.encode("utf-8")
@@ -159,7 +158,6 @@ def encrypt_payload():
             return jsonify(result)
     except Exception as e:
         return handle_user_exception(e, "encrypt_payload (encrypt)")
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=32511)
